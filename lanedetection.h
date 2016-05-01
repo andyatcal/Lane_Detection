@@ -22,11 +22,17 @@ public:
     /* The source image for every frame of camera. */
     Mat img_src;
 
-    /* The gray scaled image for every frame. Used as the input for Canny Edge Detector */
+    /* The gray scaled image for every frame. */
     Mat img_gray;
-    
+
+    /* The region of interests in the gray scale image. */
+    Mat img_roi;
 private:
+    /* Store the width and height of the image. */
     int img_width, img_height;
+    /* Def of the region of interest. */
+    int roi_start_y, roi_height;
+    /* Store the hough lines of the image. */
     vector<Vec4i> houghlines;
 };
 

@@ -2,6 +2,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
+#include "config.h"
 #include "lanedetection.h"
 #include "lanedetection.cpp"
 
@@ -26,9 +27,11 @@ int main(int argc, char **argv)
         capture = new VideoCapture(0); // From the camera
     }
 
-    cvNamedWindow("video", CV_WINDOW_AUTOSIZE); 
-    cvMoveWindow("video", 30, 30);
+    cvNamedWindow("videoInput", CV_WINDOW_AUTOSIZE); 
+    cvMoveWindow("videoInput", 30, 30);
 
+    cvNamedWindow("videoOutput", CV_WINDOW_AUTOSIZE); 
+    cvMoveWindow("videoOutput", 330, 100);
     Mat img;
 
     *capture >> img;
@@ -36,7 +39,8 @@ int main(int argc, char **argv)
     while(true) {
         *capture >> img;
         detector -> detect(img);
-        imshow("video", detector -> img_gray);
+        imshow("videoInput", detector -> img_src);
+        imshow("videoOutput", detector -> img_roi);
         waitKey(0);
     }
 
