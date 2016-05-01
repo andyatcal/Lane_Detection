@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 {
     //Import a video.
     VideoCapture *capture;
-    LaneDetection detector;
+    LaneDetection *detector = new LaneDetection;
     if (argc > 1) //From a file
     {
         capture = new VideoCapture(argv[1]);
@@ -29,14 +29,14 @@ int main(int argc, char **argv)
     cvNamedWindow("video", CV_WINDOW_AUTOSIZE); 
     cvMoveWindow("video", 30, 30);
 
-    Mat img_src;
+    Mat img;
 
-    *capture >> img_src;
-    detector.init(img_src);
-    while(1) {
-        *capture >> img_src;
-        detector.detect(img_src);
-        imshow("video", img_src);
+    *capture >> img;
+    detector -> init(img);
+    while(true) {
+        *capture >> img;
+        detector -> detect(img);
+        imshow("video", detector -> img_gray);
         waitKey(0);
     }
 
