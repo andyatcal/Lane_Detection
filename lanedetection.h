@@ -15,7 +15,8 @@ public:
      */
     void init(Mat &img);
     /**
-     * Detect lanes for every frame from the camera.
+     * @brief: Detect lanes for every frame from the camera.
+     * @param input: is the input frame from camera.
      */
     void detect(Mat &input);
 
@@ -27,6 +28,12 @@ public:
 
     /* The region of interests in the gray scale image. */
     Mat img_roi;
+
+    /**
+     * Plot the hough lines.
+     * Paint the lines on the input.
+     */
+    void plotHoughLines(Mat &input);
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;

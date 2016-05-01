@@ -8,8 +8,8 @@ void LaneDetection::init(Mat &img)
 {
     img_width = img.cols;
     img_height = img.rows;
-    int roi_start_y = img_height * ROI_START_Y_RATIO;
-    int roi_height = img_height * ROI_HEIGHT_RATIO;
+    roi_start_y = img_height * ROI_START_Y_RATIO;
+    roi_height = img_height * ROI_HEIGHT_RATIO;
 
     img_src = img;
     cvtColor(img_src, img_gray, CV_BGR2GRAY);
@@ -24,4 +24,16 @@ void LaneDetection::detect(Mat &input)
     cvtColor(img_src, img_gray, CV_BGR2GRAY);
     blur(img_gray, img_gray, Size(3,3));
     Canny(img_roi, img_roi, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGHT, 3);
+    HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 20, 10, 3);
+    plotHoughLines(img_src);
+}
+
+void LaneDetection::plotHoughLines(Mat &input)
+{
+    for( size_t i = 0; i < houghlines.size(); i++ )
+    {
+        //std::cout<<houghlines[i][0]<<" "<<houghlines[i][1]<<" "<<houghlines[i][2]<<" "<<houghlines[i][3]<<endl;
+        line(input, Point(houghlines[i][0], houghlines[i][1] + roi_start_y),
+            Point(houghlines[i][2], houghlines[i][3] + roi_start_y), Scalar(0,0,255), 3, 8 );
+    }
 }
