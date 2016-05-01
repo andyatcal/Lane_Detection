@@ -34,7 +34,5 @@ int main(int argc, char **argv)
         waitKey(1);
     }
 
-    // Hello Wei
-
     return 0;
 }
