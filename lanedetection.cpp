@@ -25,10 +25,11 @@ void LaneDetection::detect(Mat &input)
     blur(img_gray, img_gray, Size(3,3));
     Canny(img_roi, img_roi, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGHT, 3);
     HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 20, 5, 3);
+    reArrange();
     filterHoughLines();
-    renewHoughLinePoints();
-    //plotHoughLines(img_src);
-    plotHoughLinesPoints(img_src);
+    //renewHoughLinePoints();
+    plotHoughLines(img_src);
+    //plotHoughLinesPoints(img_src);
     findLaneLines();
 }
 
@@ -79,6 +80,24 @@ void LaneDetection::renewHoughLinePoints()
 
 void LaneDetection::findLaneLines()
 {
-    Vec4i newLine;
-    //fitLine(houghlinespoints, newLine, CV_DIST_L2, 0, 0.01, 0.01);
+    
+}
+
+void LaneDetection::reArrange()
+{
+    for( size_t i = 0; i < houghlines.size(); i++ )
+    {
+        Vec4i line = houghlines[i];
+        if(line[1] > line[3]) 
+        {
+            int temp = line[3];
+            line[3] = line[1];
+            line[1] = temp;
+        } else if (line[1] == line[3] && line[0] > line[2])
+        {
+            int temp = line[0];
+            line[0] = line[2];
+            line[2] = temp;
+        }
+    }
 }

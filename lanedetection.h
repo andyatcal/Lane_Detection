@@ -58,6 +58,13 @@ public:
      * Find the lane seperate lines.
      */
     void findLaneLines();
+
+    /**
+     * Rearrange the founded houghlines so that the y coordinate of the first point 
+     * is always smaller than the second point. When y coordinates are the same, the
+     * x coordinate of the first point is smaller than the second point.
+     */
+    void reArrange();
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;
