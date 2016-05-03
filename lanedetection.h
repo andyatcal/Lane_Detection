@@ -46,6 +46,11 @@ public:
     void plotHoughLinesP(Mat &input);
 
     /**
+     * plot the merged lines.
+     */
+    void plotLines(Mat &input);
+
+    /**
      * Plot the points on the hough lines.
      */
     void plotHoughLinesPoints(Mat &input);
@@ -90,6 +95,11 @@ public:
      * Apply Inverse IPM transformation. 
      */
     void applyInverseIPM(Mat &src, Mat &dst);
+
+    /**
+     * merge the lines found by hough transform.
+     */
+    void mergeLines();
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;
@@ -105,6 +115,12 @@ private:
     vector<Vec4i> houghlines_copy;
     /* Store the result of hough transform. */
     vector<Vec2f> lines;
+    /* Store the result of merged lines. */
+    vector<Vec2f> plotlines;
+    /* Store the result of merged lines. */
+    vector<Vec2f> plotlines_p1;
+    /* Store the result of merged lines. */
+    vector<Vec2f> plotlines_p2;
     /* Filtered hough lines. */
     vector<Vec4i> filteredHoughlines;
     /* Filtered hough lines. */
@@ -113,7 +129,6 @@ private:
     vector<Point> houghlinespoints;
     /* Store the lane lines.*/
     vector<Vec4i> lanelines;
-
 };
 
 #endif //LANEDETECTION_H_

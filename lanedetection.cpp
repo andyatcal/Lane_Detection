@@ -17,9 +17,10 @@ void LaneDetection::init(Mat &img)
     cvtColor(img_src, img_gray_copy, CV_RGB2GRAY);
     img_roi = img_gray(
             Rect(0, roi_start_y, img_width, roi_height));
-    img_roi_copy = img_gray_copy(
-            Rect(0, roi_start_y, img_width, roi_height));
     initIPM();
+    plotlines.clear();
+    plotlines_p1.clear();
+    plotlines_p2.clear();
     //img_hough = Mat::zeros(img.rows, img.cols, img_gray.type());
 }
 
@@ -34,29 +35,31 @@ void LaneDetection::detect(Mat &input)
     //blur(img_gray_copy, img_gray_copy, Size(3,3));
     //Canny(img_canny, img_roi, CANNY_THRESHOLD_LOW, CANNY_THRESHOLD_HIGHT, 3);
     applyIPM(img_roi, img_roi);
-    applyIPM(img_roi_copy, img_roi_copy);
+    img_roi.copyTo(img_roi_copy);
     //Sobel(img_roi, img_roi, -1, 1, 0);
     Mat sobel1 = (Mat_<double>(3,3) << -1, 0, 1, -2, 0, 2, -1, 0, 1);
     Mat sobel2 = (Mat_<double>(3,3) << 1, 0, -1, 2, 0, -2, 1, 0, -1);
-    Mat shift = (Mat_<double>(1,2) << 1, 0);
+    Mat shift = (Mat_<double>(1,3) << 1, 1, 0);
     filter2D(img_roi, img_roi, -1, sobel1);
+    threshold(img_roi, img_roi, 90, 100, THRESH_BINARY);
     filter2D(img_roi,img_roi, -1, shift);
     filter2D(img_roi_copy, img_roi_copy, -1, sobel2);
-    threshold(img_roi, img_roi, 90, 100, THRESH_BINARY);
     threshold(img_roi_copy, img_roi_copy, 90, 100, THRESH_BINARY);
     bitwise_and(img_roi, img_roi_copy, img_roi);
     applyInverseIPM(img_roi, img_roi);
     //Scharr(img_gray, img_gray, -1, 0, 1);
     //HoughLines(img_roi, lines, 1, CV_PI/180, 40, 0, 0);
     //reArrange();
-    HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 30, 3, 5);
+    HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 30, 50, 200);
     //HoughLinesP(img_roi_copy, houghlines_copy, 1, CV_PI/180, 30, 3, 5);
     //cout<<houghlines.size()<<endl;
     filterHoughLines();
-    renewHoughLinePoints();
+    mergeLines();
+    plotLines(img_src);
+    //renewHoughLinePoints();
     //plotHoughLines(img_src);
-    plotHoughLinesP(img_src);
-    plotHoughLinesPoints(img_src);
+    //plotHoughLinesP(img_src);
+    //plotHoughLinesPoints(img_src);
     //findLaneLines();
 }
 
@@ -79,7 +82,7 @@ void LaneDetection::plotHoughLinesP(Mat &input)
 
 void LaneDetection::plotHoughLines(Mat &input)
 {
-  std::cout<<lines.size()<<endl;
+  //std::cout<<lines.size()<<endl;
   for( size_t i = 0; i < lines.size(); i++ )  
   {  
      float rho = lines[i][0], theta = lines[i][1];  
@@ -92,6 +95,41 @@ void LaneDetection::plotHoughLines(Mat &input)
      pt2.y = cvRound(y0 - 2000*(a)) + roi_start_y;  
      line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
   }  
+}
+
+void LaneDetection::plotLines(Mat &input)
+{
+  //std::cout<<lines.size()<<endl;
+    for( size_t i = 0; i < plotlines.size(); i++ )  
+    {  
+        float m = plotlines[i][0], b = plotlines[i][1];  
+        Point pt1, pt2;
+        pt1.x = roi_start_y * m + b;
+        pt1.y = roi_start_y;  
+        pt2.x = (roi_start_y + roi_height) * m + b;
+        pt2.y = roi_start_y + roi_height;  
+        line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
+    }
+    for( size_t i = 0; i < plotlines_p1.size(); i++ )  
+    {  
+        float m = plotlines_p1[i][0], b = plotlines_p1[i][1];  
+        Point pt1, pt2;
+        pt1.x = roi_start_y * m + b;
+        pt1.y = roi_start_y;  
+        pt2.x = (roi_start_y + roi_height) * m + b;
+        pt2.y = roi_start_y + roi_height;  
+        line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
+    }
+    for( size_t i = 0; i < plotlines_p2.size(); i++ )  
+    {  
+        float m = plotlines_p2[i][0], b = plotlines_p2[i][1];  
+        Point pt1, pt2;
+        pt1.x = roi_start_y * m + b;
+        pt1.y = roi_start_y;  
+        pt2.x = (roi_start_y + roi_height) * m + b;
+        pt2.y = roi_start_y + roi_height;  
+        line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
+    }
 }
 
 void LaneDetection::plotHoughLinesPoints(Mat &input)
@@ -199,4 +237,54 @@ void LaneDetection::applyIPM(Mat &src, Mat &dst)
 void LaneDetection::applyInverseIPM(Mat &src, Mat &dst)
 {
     warpPerspective(src, dst, tsf_ipm_inv, src.size());
+}
+
+bool isEqual(const Vec4i& _l1, const Vec4i& _l2)
+{
+    Vec4i l1(_l1), l2(_l2);
+
+    float length1 = sqrtf((l1[2] - l1[0])*(l1[2] - l1[0]) + (l1[3] - l1[1])*(l1[3] - l1[1]));
+    float length2 = sqrtf((l2[2] - l2[0])*(l2[2] - l2[0]) + (l2[3] - l2[1])*(l2[3] - l2[1]));
+
+    float product = (l1[2] - l1[0])*(l2[2] - l2[0]) + (l1[3] - l1[1])*(l2[3] - l2[1]);
+
+    if (fabs(product / (length1 * length2)) < cos(CV_PI / 30))
+        return false;
+
+    float mx1 = (l1[0] + l1[2]) * 0.5f;
+    float mx2 = (l2[0] + l2[2]) * 0.5f;
+
+    float my1 = (l1[1] + l1[3]) * 0.5f;
+    float my2 = (l2[1] + l2[3]) * 0.5f;
+    float dist = sqrtf((mx1 - mx2)*(mx1 - mx2) + (my1 - my2)*(my1 - my2));
+
+    if (dist > std::max(length1, length2) * 0.5f)
+        return false;
+
+    return true;
+}
+
+void LaneDetection::mergeLines()
+{
+    plotlines_p2 = plotlines_p1;
+    plotlines_p1 = plotlines;
+    plotlines.clear();
+    //Vec2f nextLine;
+    /*
+    vector<vector<Vec2f> > groupMB;
+    vector<vector<Vec4i> > groupLines;
+    int m, b;
+    for( size_t i = 0; i < filteredHoughlines.size(); i++ )
+    {
+        m = 1.0 * (filteredHoughlines[i][2] - filteredHoughlines[i][0])
+         / (filteredHoughlines[i][3] - filteredHoughlines[i][1]);
+        b = filteredHoughlines[i][0] - (filteredHoughlines[i][1] + roi_start_y) * nextLine[0];
+        
+    }
+    */
+    std::vector<int> labels;
+    int numberOfLines = cv::partition(houghlines, labels, isEqual);
+    cout<<labels.size()<<endl;
+    //plotlines.push_back(nextLine);
+    //cout<<plotlines.size()<<endl;
 }
