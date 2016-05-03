@@ -26,8 +26,14 @@ public:
     /* The gray scaled image for every frame. */
     Mat img_gray;
 
+    /* The gray scaled image for every frame. */
+    Mat img_gray_copy;
+
     /* The region of interests in the gray scale image. */
     Mat img_roi;
+
+    /* The region of interests in the gray scale image. */
+    Mat img_roi_copy;
 
     /**
      * Plot the hough lines.
@@ -70,17 +76,39 @@ public:
      * x coordinate of the first point is smaller than the second point.
      */
     void reArrange();
+
+    /**
+     * Initialize IPM transformation.
+     */
+    void initIPM();
+    /**
+     * Apply IPM transformation. 
+     */
+    void applyIPM(Mat &src, Mat &dst);
+
+    /**
+     * Apply Inverse IPM transformation. 
+     */
+    void applyInverseIPM(Mat &src, Mat &dst);
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;
+    /* The start and end of IPM. */
+    int ipm_start, ipm_end;
+    /* The matrix for IPM. */
+    Mat tsf_ipm, tsf_ipm_inv;
     /* Def of the region of interest. */
     int roi_start_y, roi_height;
     /* Store the hough transform P of the image. */
     vector<Vec4i> houghlines;
+    /* Store the hough transform P of the image. */
+    vector<Vec4i> houghlines_copy;
     /* Store the result of hough transform. */
     vector<Vec2f> lines;
     /* Filtered hough lines. */
     vector<Vec4i> filteredHoughlines;
+    /* Filtered hough lines. */
+    vector<Vec4i> filteredHoughlines_copy;
     /* Store the points of houghlines here. */
     vector<Point> houghlinespoints;
     /* Store the lane lines.*/
