@@ -35,6 +35,11 @@ public:
     void plotHoughLines(Mat &input);
 
     /**
+     * Plot the hough lines, probablistics.
+     */
+    void plotHoughLinesP(Mat &input);
+
+    /**
      * Plot the points on the hough lines.
      */
     void plotHoughLinesPoints(Mat &input);
@@ -70,14 +75,17 @@ private:
     int img_width, img_height;
     /* Def of the region of interest. */
     int roi_start_y, roi_height;
-    /* Store the hough lines of the image. */
+    /* Store the hough transform P of the image. */
     vector<Vec4i> houghlines;
+    /* Store the result of hough transform. */
+    vector<Vec2f> lines;
     /* Filtered hough lines. */
     vector<Vec4i> filteredHoughlines;
     /* Store the points of houghlines here. */
     vector<Point> houghlinespoints;
     /* Store the lane lines.*/
     vector<Vec4i> lanelines;
+
 };
 
 #endif //LANEDETECTION_H_

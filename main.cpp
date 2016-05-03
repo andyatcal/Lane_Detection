@@ -30,8 +30,12 @@ int main(int argc, char **argv)
     cvNamedWindow("videoInput", CV_WINDOW_AUTOSIZE); 
     cvMoveWindow("videoInput", 30, 30);
 
+    //cvNamedWindow("grayOutput", CV_WINDOW_AUTOSIZE); 
+    //cvMoveWindow("grayOutput", 330, 100);
+
     cvNamedWindow("videoOutput", CV_WINDOW_AUTOSIZE); 
     cvMoveWindow("videoOutput", 330, 100);
+
     Mat img;
 
     *capture >> img;
@@ -40,6 +44,7 @@ int main(int argc, char **argv)
         *capture >> img;
         detector -> detect(img);
         imshow("videoInput", detector -> img_src);
+        //imshow("grayOutput", detector -> img_gray);
         imshow("videoOutput", detector -> img_roi);
         waitKey(0);
     }
