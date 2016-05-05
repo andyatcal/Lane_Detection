@@ -18,9 +18,9 @@ void LaneDetection::init(Mat &img)
     img_roi = img_gray(
             Rect(0, roi_start_y, img_width, roi_height));
     initIPM();
-    plotlines.clear();
-    plotlines_p1.clear();
-    plotlines_p2.clear();
+    //plotlines.clear();
+    //plotlines_p1.clear();
+    //plotlines_p2.clear();
     //img_hough = Mat::zeros(img.rows, img.cols, img_gray.type());
 }
 
@@ -39,7 +39,7 @@ void LaneDetection::detect(Mat &input)
     //Sobel(img_roi, img_roi, -1, 1, 0);
     Mat sobel1 = (Mat_<double>(3,3) << -1, 0, 1, -2, 0, 2, -1, 0, 1);
     Mat sobel2 = (Mat_<double>(3,3) << 1, 0, -1, 2, 0, -2, 1, 0, -1);
-    Mat shift = (Mat_<double>(1,3) << 1, 1, 0);
+    Mat shift = (Mat_<double>(1,3) << 0.5, 0.5, 0);
     filter2D(img_roi, img_roi, -1, sobel1);
     threshold(img_roi, img_roi, 90, 100, THRESH_BINARY);
     filter2D(img_roi,img_roi, -1, shift);
@@ -49,14 +49,15 @@ void LaneDetection::detect(Mat &input)
     applyInverseIPM(img_roi, img_roi);
     //Scharr(img_gray, img_gray, -1, 0, 1);
     //HoughLines(img_roi, lines, 1, CV_PI/180, 40, 0, 0);
-    //reArrange();
-    HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 30, 50, 200);
+    reArrange();
+    HoughLinesP(img_roi, houghlines, 1, CV_PI/180, 30, 20, 100);
     //HoughLinesP(img_roi_copy, houghlines_copy, 1, CV_PI/180, 30, 3, 5);
     //cout<<houghlines.size()<<endl;
     filterHoughLines();
     mergeLines();
-    plotLines(img_src);
-    //renewHoughLinePoints();
+    //plotLines(img_src);
+    plotCandidateLines(img_src);
+    renewHoughLinePoints();
     //plotHoughLines(img_src);
     //plotHoughLinesP(img_src);
     //plotHoughLinesPoints(img_src);
@@ -77,7 +78,8 @@ void LaneDetection::plotHoughLinesP(Mat &input)
         //std::cout<<houghlines[i][0]<<" "<<houghlines[i][1]<<" "<<houghlines[i][2]<<" "<<houghlines[i][3]<<endl;
         line(input, Point(filteredHoughlines_copy[i][0], filteredHoughlines_copy[i][1] + roi_start_y),
             Point(filteredHoughlines_copy[i][2], filteredHoughlines_copy[i][3] + roi_start_y), Scalar(0, 255, 0), 1, 20);
-    }*/
+    }
+    */
 }
 
 void LaneDetection::plotHoughLines(Mat &input)
@@ -104,12 +106,13 @@ void LaneDetection::plotLines(Mat &input)
     {  
         float m = plotlines[i][0], b = plotlines[i][1];  
         Point pt1, pt2;
-        pt1.x = roi_start_y * m + b;
+        pt1.x = (roi_start_y ) * m + b;
         pt1.y = roi_start_y;  
         pt2.x = (roi_start_y + roi_height) * m + b;
         pt2.y = roi_start_y + roi_height;  
         line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
     }
+    /*
     for( size_t i = 0; i < plotlines_p1.size(); i++ )  
     {  
         float m = plotlines_p1[i][0], b = plotlines_p1[i][1];  
@@ -127,6 +130,21 @@ void LaneDetection::plotLines(Mat &input)
         pt1.x = roi_start_y * m + b;
         pt1.y = roi_start_y;  
         pt2.x = (roi_start_y + roi_height) * m + b;
+        pt2.y = roi_start_y + roi_height;  
+        line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
+    }
+    */
+}
+
+void LaneDetection::plotCandidateLines(Mat &input)
+{
+  //std::cout<<lines.size()<<endl;
+    for( size_t i = 0; i < candidatelines.size(); i++ )  
+    {   
+        Point pt1, pt2;
+        pt1.x = candidatelines[i][0];
+        pt1.y = roi_start_y;  
+        pt2.x = candidatelines[i][1];
         pt2.y = roi_start_y + roi_height;  
         line(input, pt1, pt2, Scalar(0,0,255), 2, 20);
     }
@@ -248,9 +266,10 @@ bool isEqual(const Vec4i& _l1, const Vec4i& _l2)
 
     float product = (l1[2] - l1[0])*(l2[2] - l2[0]) + (l1[3] - l1[1])*(l2[3] - l2[1]);
 
-    if (fabs(product / (length1 * length2)) < cos(CV_PI / 30))
+    if(fabs(product / (length1 * length2)) < cos(CV_PI / 15))
         return false;
 
+    /*
     float mx1 = (l1[0] + l1[2]) * 0.5f;
     float mx2 = (l2[0] + l2[2]) * 0.5f;
 
@@ -260,31 +279,140 @@ bool isEqual(const Vec4i& _l1, const Vec4i& _l2)
 
     if (dist > std::max(length1, length2) * 0.5f)
         return false;
-
+        */
     return true;
+}
+
+int intersect(Vec3i l1, Vec3i l2) 
+{
+    if(l1[0] < l2[0] && l1[1] < l2[1]) {
+        return 0;
+    } else if (l1[0] > l2[0] && l1[1] > l2[1]) {
+        return 0;
+    } else { 
+        if(l1[2] > l2[2]) {
+            return 1;
+        } else {
+            return -1;
+        }
+    }
 }
 
 void LaneDetection::mergeLines()
 {
-    plotlines_p2 = plotlines_p1;
-    plotlines_p1 = plotlines;
-    plotlines.clear();
-    //Vec2f nextLine;
+    //plotlines_p2 = plotlines_p1;
+    //plotlines_p1 = plotlines;
+    candidatelines.clear();
+    std::vector<int> labels;
+    int numberOfLines = cv::partition(filteredHoughlines, labels, isEqual);
+    for(size_t i = 0; i < labels.size(); i++) {
+        cout<<labels[i]<<" ";
+    }
+    cout<<endl;
+    /* Store the optimalLines for each partition. Contains four number. 
+     * First number is the m of the optimal line for partition i.
+     * Second number is the b of the optimal line for partition i.
+     * Thrid number is the total number of lines in this partition.
+     * Fourth number is the length of the optimal line for partition i.
+     */
+    vector<Vec4f> optimallines;
+    Vec4f nextLine;
+    float m, b, d;
+    int x1, x2, y1, y2;
+    for(size_t i = 0; i < labels.size(); i++) {
+        int label = labels[i];
+        x1 = filteredHoughlines[i][0];
+        x2 = filteredHoughlines[i][2];
+        y1 = filteredHoughlines[i][1];
+        y2 = filteredHoughlines[i][3];
+        if(label == optimallines.size()) {
+            m = 1.0 * (x2 - x1) / (y2 - y1);
+            b = x1 - (y1 + roi_start_y) * m;
+            d = sqrtf((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+            nextLine[0] = m;
+            nextLine[1] = b;
+            nextLine[2] = 1;
+            nextLine[3] = d;
+            optimallines.push_back(nextLine);
+        } else {
+            d = sqrtf((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+            if(d > optimallines[label][3]) {
+                m = 1.0 * (x2 - x1) / (y2 - y1);
+                b = x1 - (y1 + roi_start_y) * m;
+                nextLine[0] = m;
+                nextLine[1] = b;
+                nextLine[2] += 1;
+                nextLine[3] = d;
+                optimallines[label] = nextLine;
+            }
+        }
+    }
+    //plotlines_p2 = plotlines_p1;
+    plotlines_p1 = candidatelines;
+    candidatelines.clear();
+    Vec3f next_plot;
+    for( size_t i = 0; i < optimallines.size(); i++ )  
+    {  
+        float m = optimallines[i][0], b = optimallines[i][1];  
+        next_plot[0] = roi_start_y * m + b;
+        next_plot[1] = (roi_start_y + roi_height) * m + b;
+        next_plot[2] = optimallines[i][2];
+        candidatelines.push_back(next_plot);
+    }
+    //plotlines.push_back(nextLine);
+    cout<<candidatelines.size()<<endl;
+    // Sort the candidatelines by the intercept with y = ROI_Y_START + ROI_HEIGHT.
+
+    //int result = 0;
     /*
-    vector<vector<Vec2f> > groupMB;
-    vector<vector<Vec4i> > groupLines;
-    int m, b;
-    for( size_t i = 0; i < filteredHoughlines.size(); i++ )
-    {
-        m = 1.0 * (filteredHoughlines[i][2] - filteredHoughlines[i][0])
-         / (filteredHoughlines[i][3] - filteredHoughlines[i][1]);
-        b = filteredHoughlines[i][0] - (filteredHoughlines[i][1] + roi_start_y) * nextLine[0];
-        
+    for(size_t i = 0; i < candidatelines.size(); i++) {
+        for(size_t j = i + 1; j < candidatelines.size();) {
+            result = intersect(candidatelines[i], candidatelines[j]);
+            if(result == 0) {
+                j++;
+            } else if(result == 1) {
+                candidatelines.erase(candidatelines.begin() + j);
+            } else {
+                candidatelines[i] = candidatelines[j];
+                candidatelines.erase(candidatelines.begin() + j);
+            }
+        }
     }
     */
-    std::vector<int> labels;
-    int numberOfLines = cv::partition(houghlines, labels, isEqual);
-    cout<<labels.size()<<endl;
-    //plotlines.push_back(nextLine);
-    //cout<<plotlines.size()<<endl;
+    //cout<<candidatelines.size()<<endl;
+    filterCandiateLines();
+}
+
+void LaneDetection::filterCandiateLines()
+{
+    // First, we sort the candidatelines with their second element, which is the intercept
+    // with y = roi_start_y + roi_height.
+    Vec3f temp;
+    for(size_t i = 0; i < candidatelines.size(); i++) {
+        for(size_t j = i+1; j < candidatelines.size(); j++) {
+            if(candidatelines[i][1] > candidatelines[j][1]) {
+                temp = candidatelines[i];
+                candidatelines[i] = candidatelines[j];
+                candidatelines[j] = temp;
+            }
+        }
+    }
+    //Filter the candidate lines with wrong placement.
+    vector<Vec4f> newCandidateLines;
+    float lastCompare = - img_width - 1;
+    float newCompare;
+    for(size_t i = 0; i < candidatelines.size(); i++) {
+        if(candidatelines[i][1] >= 0 && candidatelines[i][1] <= img_width
+         && candidatelines[i][0] >= 0 && candidatelines[i][0] <= img_width) {
+            newCompare = candidatelines[i][1] - candidatelines[i][0];
+            if(newCompare > lastCompare)
+                if(newCandidateLines.size() == 0 
+                    || candidatelines[i][0] > newCandidateLines[newCandidateLines.size() - 1][0]) {
+                newCandidateLines.push_back(candidatelines[i]);
+                lastCompare = newCompare;
+            }
+        }
+    }
+    candidatelines = newCandidateLines;
+    //Momentum information from the past frames.
 }

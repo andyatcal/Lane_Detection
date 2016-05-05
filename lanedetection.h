@@ -51,6 +51,10 @@ public:
     void plotLines(Mat &input);
 
     /**
+     * plot the candidate lines.
+     */
+    void plotCandidateLines(Mat &input);
+    /**
      * Plot the points on the hough lines.
      */
     void plotHoughLinesPoints(Mat &input);
@@ -100,6 +104,11 @@ public:
      * merge the lines found by hough transform.
      */
     void mergeLines();
+
+    /**
+     * Filter the candidate lines with all kinds of predicate.
+     */
+    void filterCandiateLines();
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;
@@ -118,9 +127,9 @@ private:
     /* Store the result of merged lines. */
     vector<Vec2f> plotlines;
     /* Store the result of merged lines. */
-    vector<Vec2f> plotlines_p1;
+    vector<Vec3f> plotlines_p1;
     /* Store the result of merged lines. */
-    vector<Vec2f> plotlines_p2;
+    //vector<Vec3f> plotlines_p2;
     /* Filtered hough lines. */
     vector<Vec4i> filteredHoughlines;
     /* Filtered hough lines. */
@@ -128,7 +137,12 @@ private:
     /* Store the points of houghlines here. */
     vector<Point> houghlinespoints;
     /* Store the lane lines.*/
-    vector<Vec4i> lanelines;
+    vector<Vec4f> candidatelines;
+    /* Store the result of merged lines. */
+    vector<Vec4f> previousBestLines;
+    /* Used to compare lines from this frame to the previous frames.*/
+    float top_diff, bottom_diff;
+
 };
 
 #endif //LANEDETECTION_H_
