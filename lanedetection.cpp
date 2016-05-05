@@ -22,6 +22,9 @@ void LaneDetection::init(Mat &img)
     //plotlines_p1.clear();
     //plotlines_p2.clear();
     //img_hough = Mat::zeros(img.rows, img.cols, img_gray.type());
+    max_frame_momentum = MAX_FRAME_MOMENTUM;
+    top_diff = img_width * TOP_DIFF_RATIO;
+    bottom_diff = img_width * BOTTOM_DIFF_RATIO;
 }
 
 
@@ -302,13 +305,12 @@ void LaneDetection::mergeLines()
 {
     //plotlines_p2 = plotlines_p1;
     //plotlines_p1 = plotlines;
-    candidatelines.clear();
     std::vector<int> labels;
     int numberOfLines = cv::partition(filteredHoughlines, labels, isEqual);
-    for(size_t i = 0; i < labels.size(); i++) {
+    /*for(size_t i = 0; i < labels.size(); i++) {
         cout<<labels[i]<<" ";
     }
-    cout<<endl;
+    cout<<endl;*/
     /* Store the optimalLines for each partition. Contains four number. 
      * First number is the m of the optimal line for partition i.
      * Second number is the b of the optimal line for partition i.
@@ -348,15 +350,17 @@ void LaneDetection::mergeLines()
         }
     }
     //plotlines_p2 = plotlines_p1;
-    plotlines_p1 = candidatelines;
+    previousBestLines.clear();
+    previousBestLines = candidatelines;
     candidatelines.clear();
-    Vec3f next_plot;
+    Vec4f next_plot;
     for( size_t i = 0; i < optimallines.size(); i++ )  
     {  
         float m = optimallines[i][0], b = optimallines[i][1];  
         next_plot[0] = roi_start_y * m + b;
         next_plot[1] = (roi_start_y + roi_height) * m + b;
         next_plot[2] = optimallines[i][2];
+        next_plot[3] = 0;
         candidatelines.push_back(next_plot);
     }
     //plotlines.push_back(nextLine);
@@ -387,7 +391,7 @@ void LaneDetection::filterCandiateLines()
 {
     // First, we sort the candidatelines with their second element, which is the intercept
     // with y = roi_start_y + roi_height.
-    Vec3f temp;
+    Vec4f temp;
     for(size_t i = 0; i < candidatelines.size(); i++) {
         for(size_t j = i+1; j < candidatelines.size(); j++) {
             if(candidatelines[i][1] > candidatelines[j][1]) {
@@ -399,20 +403,67 @@ void LaneDetection::filterCandiateLines()
     }
     //Filter the candidate lines with wrong placement.
     vector<Vec4f> newCandidateLines;
+    newCandidateLines.clear();
     float lastCompare = - img_width - 1;
     float newCompare;
     for(size_t i = 0; i < candidatelines.size(); i++) {
         if(candidatelines[i][1] >= 0 && candidatelines[i][1] <= img_width
          && candidatelines[i][0] >= 0 && candidatelines[i][0] <= img_width) {
             newCompare = candidatelines[i][1] - candidatelines[i][0];
-            if(newCompare > lastCompare)
+            if(newCompare > lastCompare) {
                 if(newCandidateLines.size() == 0 
                     || candidatelines[i][0] > newCandidateLines[newCandidateLines.size() - 1][0]) {
-                newCandidateLines.push_back(candidatelines[i]);
-                lastCompare = newCompare;
+                    newCandidateLines.push_back(candidatelines[i]);
+                    lastCompare = newCompare;
+                }
             }
         }
     }
-    candidatelines = newCandidateLines;
-    //Momentum information from the past frames.
+
+    
+    cout<<previousBestLines.size()<<endl;/*
+    for(Vec4f line : previousBestLines) {
+        cout<<line[0]<<" "<<line[1]<<" "<<line[2]<<" "<<line[3]<<endl;
+    }
+    */
+    //candidatelines = newCandidateLines;
+    vector<Vec4f> newCandidateLines1;
+    newCandidateLines1.clear();
+    size_t i = 0, j = 0;
+    while(i < previousBestLines.size() && j < newCandidateLines.size()) {
+        cout<<max_frame_momentum<<endl;
+        if(previousBestLines[i][3] >= max_frame_momentum) { // MAX_FRAME_TO_LEAVE
+            i++;
+            continue;
+        }
+        if(sameLineComparedToPrevious(previousBestLines[i], newCandidateLines[j])) {
+            newCandidateLines1.push_back(newCandidateLines[j]);
+            i++;
+            j++;
+        } else {
+            if(newCandidateLines[j][1] <= previousBestLines[i][1]) {
+                newCandidateLines1.push_back(newCandidateLines[j]);
+                j++;
+            } else {
+                previousBestLines[i][3] += 1;
+                newCandidateLines1.push_back(previousBestLines[i]);
+                i++;
+            }
+        }
+    }
+    while(j < newCandidateLines.size()) {
+        newCandidateLines1.push_back(newCandidateLines[j]);
+        j++;
+    }
+    while(i < previousBestLines.size()) {
+        previousBestLines[i][3] += 1;
+        newCandidateLines1.push_back(previousBestLines[i]);
+        i++;
+    }
+    candidatelines = newCandidateLines1;
+}
+
+bool LaneDetection::sameLineComparedToPrevious(Vec4f previous, Vec4f current) {
+    if(fabs(previous[0] - current[0]) < top_diff && fabs(previous[1] - current[1]) < bottom_diff) return true;
+    return false;
 }

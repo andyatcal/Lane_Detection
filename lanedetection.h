@@ -109,6 +109,11 @@ public:
      * Filter the candidate lines with all kinds of predicate.
      */
     void filterCandiateLines();
+
+    /**
+     * Test if this current line is the same with the last line.
+     */
+    bool sameLineComparedToPrevious(Vec4f previous, Vec4f current);
 private:
     /* Store the width and height of the image. */
     int img_width, img_height;
@@ -142,6 +147,8 @@ private:
     vector<Vec4f> previousBestLines;
     /* Used to compare lines from this frame to the previous frames.*/
     float top_diff, bottom_diff;
+    /* Max momentum frame allowed. */
+    int max_frame_momentum;
 
 };
 
